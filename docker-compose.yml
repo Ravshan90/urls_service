@@ -1,0 +1,77 @@
+version: '1.0'
+
+services:
+  php_sender:
+    container_name: sender_urls_service
+    build:
+      context: .
+      dockerfile: docker/php_sender/Dockerfile
+    ports:
+      - "9000"
+    volumes:
+      - ./docker/config/php.ini:/usr/local/etc/php/php.ini
+      - ./src:/var/www/html/:z
+    depends_on:
+      - php_receiver
+      - composer
+
+  php_receiver:
+    container_name: receiver_urls_service
+    build:
+      context: .
+      dockerfile: docker/php_receiver/Dockerfile
+    command: "php /app/receive.php"
+    volumes:
+      - ./src:/app
+    depends_on:
+      composer:
+        condition: service_started
+      rabbitmq:
+        condition: service_healthy
+    links:
+      - rabbitmq
+
+  rabbitmq:
+    container_name: rabbitmq_urls_service
+    build:
+      context: .
+      dockerfile: docker/rabbitmq/Dockerfile
+    ports:
+      - "15672:15672"
+      - "5672:5672"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:15672"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+
+  composer:
+    build: docker/composer
+    container_name: composer_urls_service
+    volumes:
+      - ./src:/app
+    command: composer install
+    environment:
+      - HOME=/home/composer
+    working_dir: /app
+
+  mariadb:
+    image: mariadb
+    container_name: mariadb_urls_service
+    command: --init-file /data/application/init.sql
+    ports:
+      - 3306:3306
+    volumes:
+      - ./docker/mariadb/init.sql:/data/application/init.sql
+      - mariadb-data:/var/lib/mysql
+    environment:
+      - MYSQL_ROOT_PASSWORD=secret
+      - MYSQL_PASSWORD=urls_service
+      - MYSQL_USER=urls_service
+      - MYSQL_DATABASE=urlsdb
+
+volumes:
+  rabbitmq-data:
+  mariadb-data:

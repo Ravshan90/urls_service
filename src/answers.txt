@@ -1,0 +1,15 @@
+1. select DATEPART(mi,created_at) AS Minute, count(*) AS UrlsCount
+from urls
+WHERE GROUP BY DATEPART(mi, created_at)
+
+2. select url, content_length from urls
+where created_at = [DATETIME]
+
+3. select url, DATEPART(mi,created_at) AS Minute from urls
+
+4. Select AVG(content_length) from urls
+WHERE GROUP BY DATEPART(mi, created_at)
+
+5. SELECT
+(SELECT url FROM urls WHERE DATEPART(mi,created_at) = [MINUTE] ORDER BY id LIMIT 1) as 'first',
+(SELECT url FROM urls WHERE DATEPART(mi,created_at) = [MINUTE] ORDER BY id DESC LIMIT 1) as 'last'
